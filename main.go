@@ -32,9 +32,10 @@ type UpConfig struct {
 }
 
 type BotConfig struct {
-	Token   string
-	UpCfg   UpConfig
-	DownCfg DownConfig
+	Token      string
+	TargetChat int64
+	UpCfg      UpConfig
+	DownCfg    DownConfig
 }
 
 func getVar(name string) string {
@@ -79,10 +80,21 @@ func main() {
 
 	if *botF {
 		telegramToken := getVar("TELEGRAM_BOT_TOKEN")
+		rawTelegramChatID := getVar("TELEGRAM_CHAT_ID")
+		telegramChatID := int64(0)
+		_, err := fmt.Sscanf(rawTelegramChatID, "%d", &telegramChatID)
+
+		if err != nil {
+			log.Fatal("failed to parse TELEGRAM_CHAT_ID: ", err.Error())
+		}
+
+		log.Print(telegramChatID)
+
 		botCfg := BotConfig{
-			Token:   telegramToken,
-			UpCfg:   upCfg,
-			DownCfg: downCfg,
+			Token:      telegramToken,
+			TargetChat: telegramChatID,
+			UpCfg:      upCfg,
+			DownCfg:    downCfg,
 		}
 
 		bot(ctx, client, botCfg)
