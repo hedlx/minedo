@@ -15,6 +15,7 @@ import (
 )
 
 var modeF = flag.String("m", "", "up | down")
+var botF = flag.Bool("bot", false, "enable bot-mode")
 
 var opt = &godo.ListOptions{
 	Page:    1,
@@ -280,52 +281,32 @@ func down(ctx context.Context, client *godo.Client, config DownConfig) {
 	}
 }
 
+func getVar(name string) string {
+	v := os.Getenv(name)
+	if v == "" {
+		log.Fatal(name, " is missing")
+	}
+
+	return v
+}
+
 func main() {
 	flag.Parse()
 
-	dropletName := os.Getenv("COPROSERVER_NAME")
-	if dropletName == "" {
-		log.Fatal("COPROSERVER_NAME is missing")
-	}
-
-	snapshotName := os.Getenv("SNAPSHOT_NAME")
-	if snapshotName == "" {
-		log.Fatal("SNAPSHOT_NAME is missing")
-	}
-
-	domainName := os.Getenv("DOMAIN_NAME")
-	if domainName == "" {
-		log.Fatal("DOMAIN_NAME is missing")
-	}
-
-	hostName := os.Getenv("HOST_NAME")
-	if hostName == "" {
-		log.Fatal("HOST_NAME is missing")
-	}
-
-	token := os.Getenv("DIGITALOCEAN_TOKEN")
-	if token == "" {
-		log.Fatal("DIGITALOCEAN_TOKEN is missing")
-	}
+	dropletName := getVar("COPROSERVER_NAME")
+	snapshotName := getVar("SNAPSHOT_NAME")
+	domainName := getVar("DOMAIN_NAME")
+	hostName := getVar("HOST_NAME")
+	token := getVar("DIGITALOCEAN_TOKEN")
 
 	client := godo.NewFromToken(token)
 	ctx := context.TODO()
 
 	if *modeF == "up" {
-		projectName := os.Getenv("PROJECT_NAME")
-		if projectName == "" {
-			log.Fatal("PROJECT_NAME is missing")
-		}
+		projectName := getVar("PROJECT_NAME")
+		region := getVar("REGION")
+		size := getVar("SIZE")
 
-		region := os.Getenv("REGION")
-		if region == "" {
-			log.Fatal("REGION is missing")
-		}
-
-		size := os.Getenv("SIZE")
-		if size == "" {
-			log.Fatal("SIZE is missing")
-		}
 		up(ctx, client, UpConfig{
 			ProjectName:  projectName,
 			DropletName:  dropletName,
