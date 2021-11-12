@@ -17,7 +17,7 @@ import (
 var modeF = flag.String("m", "", "up | down")
 var botF = flag.Bool("bot", false, "enable bot-mode")
 
-var opt = &godo.ListOptions{
+var defaultListOpts = &godo.ListOptions{
 	Page:    1,
 	PerPage: 200,
 }
@@ -37,6 +37,12 @@ type UpConfig struct {
 	SnapshotName string
 	Region       string
 	Size         string
+}
+
+type BotConfig struct {
+	Token   string
+	UpCfg   UpConfig
+	DownCfg DownConfig
 }
 
 func waitFor(ctx context.Context, client *godo.Client, dropletID, actionID int) {
@@ -72,7 +78,7 @@ func waitForDroplet(ctx context.Context, client *godo.Client, dropletID int, sta
 }
 
 func findDroplet(ctx context.Context, client *godo.Client, name string) *godo.Droplet {
-	droplets, _, err := client.Droplets.List(ctx, opt)
+	droplets, _, err := client.Droplets.List(ctx, defaultListOpts)
 
 	if err != nil {
 		log.Fatal("Failed to get droplets: ", err.Error())
@@ -90,7 +96,7 @@ func findDroplet(ctx context.Context, client *godo.Client, name string) *godo.Dr
 }
 
 func findSnapshot(ctx context.Context, client *godo.Client, name string) *godo.Snapshot {
-	snapshots, _, err := client.Snapshots.List(ctx, opt)
+	snapshots, _, err := client.Snapshots.List(ctx, defaultListOpts)
 
 	if err != nil {
 		log.Fatal("Failed to get snapshots: ", err.Error())
@@ -108,7 +114,7 @@ func findSnapshot(ctx context.Context, client *godo.Client, name string) *godo.S
 }
 
 func findProject(ctx context.Context, client *godo.Client, name string) *godo.Project {
-	projects, _, err := client.Projects.List(ctx, opt)
+	projects, _, err := client.Projects.List(ctx, defaultListOpts)
 
 	if err != nil {
 		log.Fatal("Failed to get projects: ", err.Error())
@@ -258,7 +264,7 @@ func down(ctx context.Context, client *godo.Client, config DownConfig) {
 	log.Print("Droplet has been exterminated")
 
 	recID := -1
-	recs, _, err := client.Domains.Records(ctx, config.DomainName, opt)
+	recs, _, err := client.Domains.Records(ctx, config.DomainName, defaultListOpts)
 	if err != nil {
 		log.Fatal("Failed to get domain records")
 	}
@@ -281,6 +287,9 @@ func down(ctx context.Context, client *godo.Client, config DownConfig) {
 	}
 }
 
+func bot(ctx context.Context, client *godo.Client, cfg BotConfig) {
+}
+
 func getVar(name string) string {
 	v := os.Getenv(name)
 	if v == "" {
@@ -293,36 +302,47 @@ func getVar(name string) string {
 func main() {
 	flag.Parse()
 
-	dropletName := getVar("COPROSERVER_NAME")
+	dropletName := getVar("DROPLET_NAME")
 	snapshotName := getVar("SNAPSHOT_NAME")
 	domainName := getVar("DOMAIN_NAME")
 	hostName := getVar("HOST_NAME")
 	token := getVar("DIGITALOCEAN_TOKEN")
+	projectName := getVar("PROJECT_NAME")
+	region := getVar("REGION")
+	size := getVar("SIZE")
+
+	upCfg := UpConfig{
+		ProjectName:  projectName,
+		DropletName:  dropletName,
+		DomainName:   domainName,
+		HostName:     hostName,
+		SnapshotName: snapshotName,
+		Region:       region,
+		Size:         size,
+	}
+	downCfg := DownConfig{
+		DropletName:  dropletName,
+		SnapshotName: snapshotName,
+		DomainName:   domainName,
+		HostName:     hostName,
+	}
 
 	client := godo.NewFromToken(token)
 	ctx := context.TODO()
 
-	if *modeF == "up" {
-		projectName := getVar("PROJECT_NAME")
-		region := getVar("REGION")
-		size := getVar("SIZE")
+	if *botF {
+		telegramToken := getVar("TELEGRAM_BOT_TOKEN")
+		botCfg := BotConfig{
+			Token:   telegramToken,
+			UpCfg:   upCfg,
+			DownCfg: downCfg,
+		}
 
-		up(ctx, client, UpConfig{
-			ProjectName:  projectName,
-			DropletName:  dropletName,
-			DomainName:   domainName,
-			HostName:     hostName,
-			SnapshotName: snapshotName,
-			Region:       region,
-			Size:         size,
-		})
+		bot(ctx, client, botCfg)
+	} else if *modeF == "up" {
+		up(ctx, client, upCfg)
 	} else if *modeF == "down" {
-		down(ctx, client, DownConfig{
-			DropletName:  dropletName,
-			SnapshotName: snapshotName,
-			DomainName:   domainName,
-			HostName:     hostName,
-		})
+		down(ctx, client, downCfg)
 	} else {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
