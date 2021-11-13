@@ -1,6 +1,7 @@
 ```bash
-$ ./minedo -h                 
-Usage of ./minedo:
+$  Usage of ./minedo:
+  -bot
+        enable bot-mode
   -m string
         up | down
 ```
