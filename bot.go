@@ -69,7 +69,7 @@ func bot(ctx context.Context, client *godo.Client, cfg BotConfig) error {
 				continue
 			}
 
-			if !checkCmdValid(update.Message.CommandWithAt(), []string{"up", "down"}, me.UserName) {
+			if !checkCmdValid(update.Message.CommandWithAt(), []string{"up", "down", "ping"}, me.UserName) {
 				continue
 			}
 
@@ -86,6 +86,7 @@ func bot(ctx context.Context, client *godo.Client, cfg BotConfig) error {
 			}
 
 			cmd := update.Message.Command()
+
 			if cmd == "up" {
 				go runAction(upAction, workCh)
 				isBusy = true
@@ -94,6 +95,10 @@ func bot(ctx context.Context, client *godo.Client, cfg BotConfig) error {
 			if cmd == "down" {
 				go runAction(downAction, workCh)
 				isBusy = true
+			}
+
+			if cmd == "ping" {
+				sendMsg("pong")
 			}
 		case err = <-workCh:
 			if err != nil {

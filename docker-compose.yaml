@@ -1,0 +1,7 @@
+version: '3.6'
+services:
+  minebot:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - "${PWD}/.env:/srv/minedo/.env"
